@@ -1,0 +1,448 @@
+{
+  "_schema_info": {
+    "schema_name": "disknory_brain_entry",
+    "schema_version": "1.0.0",
+    "language": "english",
+    "created_date": "2026-04-27",
+    "last_updated": "2026-04-27",
+    "description": "Word entry structure for the DISKNORY-FOR-AI brain. Each word is stored as a flat JSON object with 45+ fields covering identity, pronunciation, grammar, meaning, usage, AI intelligence flags, learning data, and system control. This schema is the single source of truth for all dictionary and AI-brain operations.",
+    "extensible": true,
+    "allows_new_fields": true,
+    "sections": {
+      "A": "CORE IDENTITY — word_id, word, lowercase, letters, letter_count, syllables",
+      "B": "PRONUNCIATION — phonetic_ipa, phonetic_simple, audio_available",
+      "C": "GRAMMAR — part_of_speech, grammar_role, root_word, word_family, plural_form, tense_forms, comparative, superlative",
+      "D": "MEANINGS — hindi_meaning, english_meaning, definition_simple, definition_detailed, synonyms, antonyms",
+      "E": "USAGE EXAMPLES — example_sentence_en, example_sentence_hi, usage_context, common_phrases",
+      "F": "AI INTELLIGENCE FLAGS — 17 boolean flags for fast O(1) classification",
+      "G": "AI LEARNING DATA — confidence_score, learned_from, learned_date, times_used, last_used, user_corrections, alternative_meanings, related_concepts",
+      "H": "SYSTEM CONTROL — created_by, created_timestamp, modified_by, modified_timestamp, version, is_locked"
+    },
+    "validation_rules": {
+      "word_id": "MUST be unique. Format: LANG_NNN_wordname (e.g. ENG_001_hello)",
+      "word_lowercase_match": "word field MUST equal lowercase of original word",
+      "letters_match": "letters array MUST equal list(word)",
+      "letter_count_match": "letter_count MUST equal len(letters)",
+      "confidence_score_range": "confidence_score MUST be between 0.0 and 1.0 inclusive",
+      "boolean_flags": "All is_* fields MUST be true or false — never null",
+      "timestamp_format": "All timestamp fields MUST use ISO 8601 format (YYYY-MM-DDTHH:MM:SSZ)",
+      "version_increment": "version MUST increment by 1 on every edit",
+      "null_allowed": "null values are allowed for non-applicable fields (use null, not empty string)",
+      "is_locked": "is_locked=true means AI cannot edit the entry without explicit user/admin permission"
+    },
+    "ai_operations": {
+      "add_word": {
+        "steps": [
+          "Generate unique word_id (format LANG_NNN_wordname)",
+          "Fill all required fields",
+          "Compute all 17 is_* boolean flags",
+          "Set created_by = 'ai', created_timestamp = now()",
+          "Set version = 1",
+          "Run full validation before save",
+          "Write to appropriate batch file"
+        ]
+      },
+      "edit_word": {
+        "steps": [
+          "Check is_locked — abort if true",
+          "Load existing entry",
+          "Apply changes",
+          "Increment version by 1",
+          "Update modified_timestamp = now()",
+          "Update modified_by = 'ai'",
+          "Keep created_timestamp and created_by unchanged",
+          "Run full validation before save"
+        ]
+      },
+      "delete_word": {
+        "steps": [
+          "Set is_locked = true first",
+          "Move entry to archive file (not permanent delete)",
+          "Log deletion in journal with timestamp",
+          "Remove from active batch file"
+        ]
+      },
+      "learn_new_meaning": {
+        "steps": [
+          "Add new meaning to alternative_meanings array",
+          "Recalculate confidence_score based on frequency of use",
+          "Add any newly discovered concepts to related_concepts",
+          "Increment version, update modified_timestamp"
+        ]
+      },
+      "self_upgrade": {
+        "rules": [
+          "May add new optional fields (schema.extensible = true allows this)",
+          "Cannot remove existing required fields",
+          "Must maintain backward compatibility with schema version 1.0.0",
+          "New required fields require schema version bump (e.g. 1.1.0)"
+        ]
+      }
+    },
+    "future_expansion": {
+      "hindi_words": "Set language='hindi', keep identical structure, fill hindi_meaning with primary meaning",
+      "hinglish_words": "Set language='hinglish', fill both hindi_meaning and english_meaning",
+      "new_languages": "Copy schema, change language field, add translation fields as needed",
+      "new_field_types": "Add as optional fields, schema_version bumps to 1.x.0; do NOT break 1.0.0 readers"
+    },
+    "performance_notes": {
+      "word_id": "Designed for O(1) direct lookup by unique key",
+      "lowercase": "Enables case-insensitive search without transformation at query time",
+      "letters": "Enables prefix and pattern matching (e.g. starts-with, anagram, regex)",
+      "is_flags": "17 boolean fields allow fast category filtering without parsing meaning strings",
+      "confidence_score": "Float score allows priority ranking — return most-certain entries first"
+    }
+  },
+
+  "entries": [
+
+    {
+      "_comment_section_a": "SECTION A: CORE IDENTITY",
+      "word_id": "ENG_001_hello",
+      "word": "hello",
+      "lowercase": "hello",
+      "letters": ["h", "e", "l", "l", "o"],
+      "letter_count": 5,
+      "syllables": 2,
+
+      "_comment_section_b": "SECTION B: PRONUNCIATION",
+      "phonetic_ipa": "/həˈloʊ/",
+      "phonetic_simple": "huh-LOH",
+      "audio_available": false,
+
+      "_comment_section_c": "SECTION C: GRAMMAR",
+      "part_of_speech": "interjection",
+      "grammar_role": "greeting",
+      "root_word": "hello",
+      "word_family": ["hello", "helloed", "helloing"],
+      "plural_form": null,
+      "tense_forms": null,
+      "comparative": null,
+      "superlative": null,
+
+      "_comment_section_d": "SECTION D: MEANINGS",
+      "hindi_meaning": "नमस्ते",
+      "english_meaning": "A greeting or expression of goodwill",
+      "definition_simple": "Used to greet someone",
+      "definition_detailed": "A common greeting used when meeting someone, starting a phone call, or drawing attention. It expresses goodwill and signals the start of communication.",
+      "synonyms": ["hi", "hey", "greetings", "welcome", "howdy"],
+      "antonyms": ["goodbye", "bye", "farewell"],
+
+      "_comment_section_e": "SECTION E: USAGE EXAMPLES",
+      "example_sentence_en": "Hello, how are you doing today?",
+      "example_sentence_hi": "नमस्ते, आप आज कैसे हैं?",
+      "usage_context": ["formal", "informal", "casual"],
+      "common_phrases": ["hello world", "hello there", "say hello", "hello again"],
+
+      "_comment_section_f": "SECTION F: AI INTELLIGENCE FLAGS (17 boolean fields)",
+      "is_noun": false,
+      "is_verb": false,
+      "is_adjective": false,
+      "is_adverb": false,
+      "is_common": true,
+      "is_technical": false,
+      "is_slang": false,
+      "is_formal": false,
+      "is_informal": true,
+      "is_question_word": false,
+      "is_emotion": false,
+      "is_time_related": false,
+      "is_place_related": false,
+      "is_person_related": true,
+      "is_number": false,
+      "is_color": false,
+      "is_action": false,
+
+      "_comment_section_g": "SECTION G: AI LEARNING DATA",
+      "confidence_score": 1.0,
+      "learned_from": "dictionary",
+      "learned_date": "2026-04-27",
+      "times_used": 0,
+      "last_used": null,
+      "user_corrections": [],
+      "alternative_meanings": ["Used when answering a phone", "Used to express surprise informally"],
+      "related_concepts": ["greeting", "welcome", "salutation", "introduction"],
+
+      "_comment_section_h": "SECTION H: SYSTEM CONTROL",
+      "created_by": "system",
+      "created_timestamp": "2026-04-27T00:00:00Z",
+      "modified_by": "system",
+      "modified_timestamp": "2026-04-27T00:00:00Z",
+      "version": 1,
+      "is_locked": false
+    },
+
+    {
+      "word_id": "ENG_002_world",
+      "word": "world",
+      "lowercase": "world",
+      "letters": ["w", "o", "r", "l", "d"],
+      "letter_count": 5,
+      "syllables": 1,
+
+      "phonetic_ipa": "/wɜːrld/",
+      "phonetic_simple": "wurld",
+      "audio_available": false,
+
+      "part_of_speech": "noun",
+      "grammar_role": "subject",
+      "root_word": "world",
+      "word_family": ["worlds", "worldly", "worldwide", "world-class", "underworld"],
+      "plural_form": "worlds",
+      "tense_forms": null,
+      "comparative": null,
+      "superlative": null,
+
+      "hindi_meaning": "दुनिया / संसार / विश्व",
+      "english_meaning": "The earth and all life upon it; a particular region or group of people; a large amount",
+      "definition_simple": "The planet Earth; all people and places on Earth",
+      "definition_detailed": "'World' refers to the Earth as a planet ('travel the world'), all human society ('the modern world'), a particular area of activity ('the world of science'), or a large quantity ('a world of difference'). Its plural 'worlds' is used in fiction for separate universes.",
+      "synonyms": ["earth", "globe", "planet", "universe", "realm", "domain", "sphere"],
+      "antonyms": ["nothing", "void", "emptiness"],
+
+      "example_sentence_en": "She wants to travel around the world before she turns thirty.",
+      "example_sentence_hi": "वह तीस साल की होने से पहले पूरी दुनिया घूमना चाहती है।",
+      "usage_context": ["formal", "informal", "academic", "casual"],
+      "common_phrases": ["world record", "world peace", "world war", "real world", "world-class", "out of this world"],
+
+      "is_noun": true,
+      "is_verb": false,
+      "is_adjective": false,
+      "is_adverb": false,
+      "is_common": true,
+      "is_technical": false,
+      "is_slang": false,
+      "is_formal": true,
+      "is_informal": true,
+      "is_question_word": false,
+      "is_emotion": false,
+      "is_time_related": false,
+      "is_place_related": true,
+      "is_person_related": false,
+      "is_number": false,
+      "is_color": false,
+      "is_action": false,
+
+      "confidence_score": 1.0,
+      "learned_from": "dictionary",
+      "learned_date": "2026-04-27",
+      "times_used": 0,
+      "last_used": null,
+      "user_corrections": [],
+      "alternative_meanings": ["A particular environment ('the world of art')", "A large amount ('worlds apart')"],
+      "related_concepts": ["earth", "globe", "humanity", "society", "universe", "planet"],
+
+      "created_by": "system",
+      "created_timestamp": "2026-04-27T00:00:00Z",
+      "modified_by": "system",
+      "modified_timestamp": "2026-04-27T00:00:00Z",
+      "version": 1,
+      "is_locked": false
+    },
+
+    {
+      "word_id": "ENG_003_love",
+      "word": "love",
+      "lowercase": "love",
+      "letters": ["l", "o", "v", "e"],
+      "letter_count": 4,
+      "syllables": 1,
+
+      "phonetic_ipa": "/lʌv/",
+      "phonetic_simple": "luv",
+      "audio_available": false,
+
+      "part_of_speech": "noun",
+      "grammar_role": "subject",
+      "root_word": "love",
+      "word_family": ["loves", "loved", "loving", "lover", "lovely", "loveless", "beloved", "self-love"],
+      "plural_form": null,
+      "tense_forms": {"past": "loved", "present": "love/loves", "future": "will love", "continuous": "loving"},
+      "comparative": null,
+      "superlative": null,
+
+      "hindi_meaning": "प्यार / प्रेम / मोहब्बत",
+      "english_meaning": "An intense feeling of deep affection; to feel deep affection for someone or something",
+      "definition_simple": "A deep feeling of caring and affection for someone",
+      "definition_detailed": "'Love' as a noun means deep affection ('love for family'), romantic passion ('fall in love'), or in sports a score of zero ('love-fifteen' in tennis). As a verb it means to deeply care for ('I love you') or greatly enjoy ('she loves reading'). 'Lovely' means pleasant. 'Beloved' means dearly loved.",
+      "synonyms": ["affection", "adoration", "devotion", "fondness", "passion", "warmth", "cherish", "care"],
+      "antonyms": ["hate", "hatred", "dislike", "loathe", "despise", "indifference"],
+
+      "example_sentence_en": "She shows love and kindness to everyone she meets every day.",
+      "example_sentence_hi": "वह हर रोज हर उस व्यक्ति को प्यार और दया दिखाती है जिससे वह मिलती है।",
+      "usage_context": ["formal", "informal", "casual"],
+      "common_phrases": ["fall in love", "love at first sight", "true love", "love letter", "love story", "self-love"],
+
+      "is_noun": true,
+      "is_verb": true,
+      "is_adjective": false,
+      "is_adverb": false,
+      "is_common": true,
+      "is_technical": false,
+      "is_slang": false,
+      "is_formal": false,
+      "is_informal": true,
+      "is_question_word": false,
+      "is_emotion": true,
+      "is_time_related": false,
+      "is_place_related": false,
+      "is_person_related": true,
+      "is_number": false,
+      "is_color": false,
+      "is_action": true,
+
+      "confidence_score": 1.0,
+      "learned_from": "dictionary",
+      "learned_date": "2026-04-27",
+      "times_used": 0,
+      "last_used": null,
+      "user_corrections": [],
+      "alternative_meanings": ["Tennis score of zero ('love-fifteen')", "A term of endearment ('yes, love')"],
+      "related_concepts": ["affection", "emotion", "relationship", "care", "romance", "devotion", "heart"],
+
+      "created_by": "system",
+      "created_timestamp": "2026-04-27T00:00:00Z",
+      "modified_by": "system",
+      "modified_timestamp": "2026-04-27T00:00:00Z",
+      "version": 1,
+      "is_locked": false
+    },
+
+    {
+      "word_id": "ENG_004_time",
+      "word": "time",
+      "lowercase": "time",
+      "letters": ["t", "i", "m", "e"],
+      "letter_count": 4,
+      "syllables": 1,
+
+      "phonetic_ipa": "/taɪm/",
+      "phonetic_simple": "tyme",
+      "audio_available": false,
+
+      "part_of_speech": "noun",
+      "grammar_role": "subject",
+      "root_word": "time",
+      "word_family": ["times", "timer", "timely", "overtime", "daytime", "lifetime", "sometime", "timetable", "timing"],
+      "plural_form": "times",
+      "tense_forms": {"past": "timed", "present": "time/times", "future": "will time", "continuous": "timing"},
+      "comparative": null,
+      "superlative": null,
+
+      "hindi_meaning": "समय / वक्त / काल",
+      "english_meaning": "The indefinite continued progress of events from past to future; a specific point or period",
+      "definition_simple": "The progress of events; a moment or period",
+      "definition_detailed": "'Time' refers to the continuous passing of events from past through present to future. As a countable noun it refers to specific occasions ('many times') or a period ('a long time'). It is one of the most conceptually important words in human language, appearing in hundreds of expressions, idioms, and compound words.",
+      "synonyms": ["period", "moment", "duration", "era", "occasion", "age", "hour", "day", "epoch"],
+      "antonyms": [],
+
+      "example_sentence_en": "Time is the most valuable resource we have — once spent, it cannot be recovered.",
+      "example_sentence_hi": "समय हमारे पास सबसे मूल्यवान संसाधन है — एक बार खर्च होने पर इसे वापस नहीं पाया जा सकता।",
+      "usage_context": ["formal", "informal", "academic", "casual"],
+      "common_phrases": ["on time", "in time", "take your time", "time flies", "waste of time", "time management", "quality time", "time zone"],
+
+      "is_noun": true,
+      "is_verb": true,
+      "is_adjective": false,
+      "is_adverb": false,
+      "is_common": true,
+      "is_technical": false,
+      "is_slang": false,
+      "is_formal": true,
+      "is_informal": true,
+      "is_question_word": false,
+      "is_emotion": false,
+      "is_time_related": true,
+      "is_place_related": false,
+      "is_person_related": false,
+      "is_number": false,
+      "is_color": false,
+      "is_action": false,
+
+      "confidence_score": 1.0,
+      "learned_from": "dictionary",
+      "learned_date": "2026-04-27",
+      "times_used": 0,
+      "last_used": null,
+      "user_corrections": [],
+      "alternative_meanings": ["Verb: to measure the duration of something ('time the race')", "A particular moment ('it's time to go')", "Multiplied by ('three times four is twelve')"],
+      "related_concepts": ["clock", "calendar", "schedule", "duration", "moment", "hour", "second", "past", "future", "present"],
+
+      "created_by": "system",
+      "created_timestamp": "2026-04-27T00:00:00Z",
+      "modified_by": "system",
+      "modified_timestamp": "2026-04-27T00:00:00Z",
+      "version": 1,
+      "is_locked": false
+    },
+
+    {
+      "word_id": "ENG_005_python",
+      "word": "python",
+      "lowercase": "python",
+      "letters": ["p", "y", "t", "h", "o", "n"],
+      "letter_count": 6,
+      "syllables": 2,
+
+      "phonetic_ipa": "/ˈpaɪθɒn/",
+      "phonetic_simple": "PY-thon",
+      "audio_available": false,
+
+      "part_of_speech": "noun",
+      "grammar_role": "subject",
+      "root_word": "python",
+      "word_family": ["pythons", "pythonic", "pythonista"],
+      "plural_form": "pythons",
+      "tense_forms": null,
+      "comparative": null,
+      "superlative": null,
+
+      "hindi_meaning": "अजगर (साँप) / पाइथन (प्रोग्रामिंग भाषा)",
+      "english_meaning": "A large non-venomous snake; also a high-level general-purpose programming language",
+      "definition_simple": "A large snake, or a popular programming language",
+      "definition_detailed": "'Python' has two primary meanings: (1) A large constricting snake of the family Pythonidae found in Africa, Asia, and Australia. (2) Python the programming language — a high-level, interpreted, general-purpose programming language designed by Guido van Rossum, emphasizing readability and simplicity. Python (the language) is widely used in AI, data science, web development, and automation.",
+      "synonyms": ["boa", "constrictor", "serpent (animal meaning)", "scripting language (tech meaning)"],
+      "antonyms": [],
+
+      "example_sentence_en": "She wrote a Python script to automatically process thousands of dictionary entries.",
+      "example_sentence_hi": "उसने हजारों शब्दकोश प्रविष्टियों को स्वचालित रूप से संसाधित करने के लिए एक Python स्क्रिप्ट लिखी।",
+      "usage_context": ["technical", "academic", "formal"],
+      "common_phrases": ["Python script", "Python code", "Python library", "Python developer", "Python 3", "run Python", "python snake"],
+
+      "is_noun": true,
+      "is_verb": false,
+      "is_adjective": false,
+      "is_adverb": false,
+      "is_common": false,
+      "is_technical": true,
+      "is_slang": false,
+      "is_formal": true,
+      "is_informal": false,
+      "is_question_word": false,
+      "is_emotion": false,
+      "is_time_related": false,
+      "is_place_related": false,
+      "is_person_related": false,
+      "is_number": false,
+      "is_color": false,
+      "is_action": false,
+
+      "confidence_score": 1.0,
+      "learned_from": "dictionary",
+      "learned_date": "2026-04-27",
+      "times_used": 0,
+      "last_used": null,
+      "user_corrections": [],
+      "alternative_meanings": ["Greek mythology: a giant serpent killed by Apollo", "A programming language (most common modern usage in tech contexts)"],
+      "related_concepts": ["programming", "coding", "snake", "reptile", "AI", "machine learning", "scripting", "automation", "data science"],
+
+      "created_by": "system",
+      "created_timestamp": "2026-04-27T00:00:00Z",
+      "modified_by": "system",
+      "modified_timestamp": "2026-04-27T00:00:00Z",
+      "version": 1,
+      "is_locked": false
+    }
+
+  ]
+}

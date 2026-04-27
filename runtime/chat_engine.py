@@ -10,6 +10,7 @@ from collections import OrderedDict
 from dataclasses import dataclass, field
 from datetime import datetime
 import re
+import random
 from typing import Any, Dict, List, Optional
 
 try:
@@ -237,39 +238,24 @@ class ChatEngine:
         return "neutral"
 
     def _build_reply(self, understood: UnderstoodMessage) -> ChatResponse:
-        """Build reply text from interpreted message state."""
+        """Build reply text from interpreted message state with natural conversation flow."""
         reply_type = understood.suggested_reply_type
         includes_hindi = False
         includes_examples = False
         follow_up = False
 
         if understood.intent == "greeting":
-            name = self.get_context("user_name")
-            text = f"Hello{' ' + name if name else ''}! How can I help you today?"
+            text = self._compose_greeting(understood)
 
         elif understood.intent == "farewell":
-            text = "Goodbye! Take care 👋"
+            text = random.choice([
+                "Goodbye! Take care 👋",
+                "Phir milenge! Bye 👋",
+                "See you later! 🎉",
+            ])
 
         elif understood.intent == "question":
-            if understood.main_subject:
-                entry = self.mm.get_word(understood.main_subject)
-                if entry:
-                    meaning = entry.get("english_meaning", "No meaning available.")
-                    h_meaning = entry.get("hindi_meaning")
-                    example = entry.get("example_sentence_en")
-                    text = f"{understood.main_subject}: {meaning}"
-                    if h_meaning:
-                        text += f" | Hindi: {h_meaning}"
-                        includes_hindi = True
-                    if example:
-                        text += f" Example: {example}"
-                        includes_examples = True
-                else:
-                    text = f"I couldn't find '{understood.main_subject}' yet. Can you teach me its meaning?"
-                    follow_up = True
-            else:
-                text = "I need a little more context to answer that. Can you rephrase?"
-                follow_up = True
+            text, includes_hindi, includes_examples, follow_up = self._compose_question(understood)
 
         elif understood.intent == "command":
             if understood.main_action:
@@ -279,15 +265,10 @@ class ChatEngine:
                 follow_up = True
 
         elif understood.intent == "statement":
-            if understood.sentiment == "positive":
-                text = "Nice! I understand your point. Want me to explain any specific word from it?"
-            elif understood.sentiment == "negative":
-                text = "I hear you. If you want, I can help break this down step by step."
-            else:
-                text = "Understood. I can explain meanings, grammar, or examples from your message."
+            text = self._compose_statement(understood, includes_hindi)
 
         else:
-            text = "I am not fully sure what you want yet. Please ask as a question or command."
+            text = self._compose_default(understood)
             follow_up = True
 
         if understood.unknown_words:
@@ -295,7 +276,7 @@ class ChatEngine:
             text += f" I also found unknown words: {unknown_preview}."
             follow_up = True
 
-        # keep quick response target
+        # Keep quick response target
         if len(text) > 500:
             text = text[:497] + "..."
 
@@ -304,13 +285,184 @@ class ChatEngine:
             reply_type=reply_type,
             confidence=max(0.2, understood.confidence),
             source_words=understood.known_words + understood.unknown_words,
-            language="hinglish" if includes_hindi else "english",
+            language="hinglish" if includes_hindi else understood.language,
             includes_hindi=includes_hindi,
             includes_examples=includes_examples,
             follow_up_suggested=follow_up,
             learning_triggered=bool(understood.unknown_words),
             timestamp=self._now_iso(),
         )
+
+    def _compose_greeting(self, understood: UnderstoodMessage) -> str:
+        """Natural conversation greeting responses."""
+        name = self.get_context("user_name")
+        
+        greetings = {
+            "english": [
+                f"Hey! Kaise hai tu?",
+                f"Hello! Kya haal chaal?",
+                f"Hi! Aaj kya plan hai?",
+                f"Hey there! What's up?",
+                f"Hello! How can I help?",
+            ],
+            "hindi": [
+                "नमस्ते! कैसे हो भाई?",
+                "अरे! क्या हाल है?",
+                "हेलो! आज क्या चल रहा है?",
+                "नमस्कार! कैसे हो?",
+                "सुनो! क्या चल रहा है?",
+            ],
+            "hinglish": [
+                "Hey bhai! Kaise hai?",
+                "Hello dost! Kya scene hai?",
+                "Hi yaar! Sab badhiya?",
+                "Namaste! Kaisa jaa raha hai?",
+                "Kya chal raha hai bhai?",
+            ]
+        }
+        
+        text = random.choice(greetings.get(understood.language, greetings["english"]))
+        
+        if name:
+            text = f"{text} {name}!"
+        
+        return text
+
+    def _compose_question(self, understood: UnderstoodMessage) -> tuple:
+        """Natural conversation question responses."""
+        includes_hindi = False
+        includes_examples = False
+        follow_up = False
+        
+        if understood.main_subject:
+            entry = self.mm.get_word(understood.main_subject)
+            if entry:
+                word = entry.get("word", understood.main_subject)
+                meaning = entry.get("english_meaning", "")
+                h_meaning = entry.get("hindi_meaning", "")
+                example = entry.get("example_sentence_en", "")
+                
+                if understood.language == "hindi":
+                    text = f"{word} ka matlab hota hai: {h_meaning or meaning}."
+                    if example:
+                        text += f" Udaharan: {example}"
+                        includes_examples = True
+                elif understood.language == "hinglish":
+                    text = f"'{word}' means {meaning}"
+                    if h_meaning:
+                        text += f" (Hindi: {h_meaning})"
+                        includes_hindi = True
+                    if example:
+                        text += f". Example: {example}"
+                        includes_examples = True
+                    text += ". Aur kuch jaanna hai?"
+                else:
+                    text = f"'{word}' means: {meaning}"
+                    if h_meaning:
+                        text += f" | Hindi: {h_meaning}"
+                        includes_hindi = True
+                    if example:
+                        text += f". Example: {example}"
+                        includes_examples = True
+            else:
+                if understood.language == "hindi":
+                    text = f"Mujhe '{understood.main_subject}' ke baare mein pata nahi. Tu samjha sakta hai?"
+                elif understood.language == "hinglish":
+                    text = f"'{understood.main_subject}' mere paas nahi hai. Kya tu sikhayega?"
+                else:
+                    text = f"I couldn't find '{understood.main_subject}' yet. Can you teach me its meaning?"
+                follow_up = True
+        else:
+            if understood.language == "hindi":
+                text = "Mujhe thoda context chahiye. Kya tu phir se puch sakta hai?"
+            elif understood.language == "hinglish":
+                text = "Mujhe thoda aur detail chahiye. Phir se puch na?"
+            else:
+                text = "I need a little more context to answer that. Can you rephrase?"
+            follow_up = True
+        
+        return text, includes_hindi, includes_examples, follow_up
+
+    def _compose_statement(self, understood: UnderstoodMessage, includes_hindi: bool) -> str:
+        """Natural conversation statement responses."""
+        if understood.sentiment == "positive":
+            responses = {
+                "english": [
+                    "Nice! That's awesome! Want me to explain any word from that?",
+                    "Great! I understand your point. Aur bataao?",
+                    "Awesome! Can I help clarify something?",
+                ],
+                "hindi": [
+                    "वाह! बहुत अच्छा! कुछ शब्द समझाऊँ?",
+                    "बढ़िया! मुझे समझ आ गया। और बताओ?",
+                    "शानदार! कुछ और है?",
+                ],
+                "hinglish": [
+                    "Wah! Bahut badhiya! Kuch samjhaoo?",
+                    "Nice bhai! Aur bata.",
+                    "Awesome! Kya aur bataana hai?",
+                ]
+            }
+        elif understood.sentiment == "negative":
+            responses = {
+                "english": [
+                    "I hear you. That sounds tough. I can help break it down.",
+                    "Samjha. Ye problem hai. Hum milke dekh sakte hain.",
+                    "I understand. Let's work through it together.",
+                ],
+                "hindi": [
+                    "समझा मैंने। यह मुश्किल है। मैं मदद कर सकता हूँ।",
+                    "पता चला। ये समस्या है। हम मिलकर देख सकते हैं।",
+                    "समझा! आइए इसे हल करते हैं।",
+                ],
+                "hinglish": [
+                    "Samjha bhai. Ye tough hai. Help kar sakta hoon.",
+                    "Pata chal gaya. Chalo milder dekh lete hain.",
+                    "Samjha! Aate hain isko solve karein.",
+                ]
+            }
+        else:
+            responses = {
+                "english": [
+                    "Understood! I can explain meanings or give examples from that.",
+                    "Got it! Want me to break down any word?",
+                    "Samjh gaya! Aur kya jaanna hai?",
+                ],
+                "hindi": [
+                    "समझा! क्या कोई शब्द समझाऊँ?",
+                    "पता चल गया! और क्या चाहिए?",
+                    "ठीक है! कुछ और पूछना है?",
+                ],
+                "hinglish": [
+                    "Samjh gaya! Kya word samjhao?",
+                    "Got it! Aur kya chahiye?",
+                    "Thik hai! Kuch aur puchna?",
+                ]
+            }
+        
+        return random.choice(responses.get(understood.language, responses["english"]))
+
+    def _compose_default(self, understood: UnderstoodMessage) -> str:
+        """Default fallback responses for unclear intents."""
+        responses = {
+            "english": [
+                "I'm not fully sure what you want. Can you ask as a question or command?",
+                "Hmm, I didn't quite get that. Can you clarify?",
+                "Sorry, I need more details to understand you better.",
+            ],
+            "hindi": [
+                "मुझे समझ नहीं आया। क्या तुम सवाल पूछ सकते हो?",
+                "अरे! थोड़ा स्पष्ट करो न।",
+                "माफ करना। मुझे और जानकारी चाहिए।",
+            ],
+            "hinglish": [
+                "Nahi samjha bhai. Kya question form mein puch sakta hai?",
+                "Hmm, samjh nahi aya. Detail de na?",
+                "Sorry yaar. Thoda aur bata.",
+            ]
+        }
+        
+        return random.choice(responses.get(understood.language, responses["english"]))
 
     def _learn_from_interaction(self, parsed: ParsedMessage, understood: UnderstoodMessage, reply: ChatResponse) -> None:
         """Track usage stats and unknown words after each interaction."""

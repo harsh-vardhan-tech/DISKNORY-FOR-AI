@@ -1,0 +1,22 @@
+{
+  "schema_version": "1.0",
+  "schema_name": "DISKNORY-MEMORY-EVENT-SCHEMA",
+  "description": "Every add/edit/delete/learn/correct event is journaled using this schema.",
+  "required_fields": [
+    "event_id", "timestamp", "operation", "actor", "target_word_id"
+  ],
+  "operations": ["add", "edit", "delete", "restore", "learn", "correct", "merge", "rollback"],
+  "actors": ["system", "user", "ai", "auto"],
+  "fields": {
+    "event_id": "uuid",
+    "timestamp": "iso datetime",
+    "operation": "string",
+    "actor": "string",
+    "target_word_id": "string",
+    "target_word": "string",
+    "before": "object|null",
+    "after": "object|null",
+    "reason": "string",
+    "session_id": "string"
+  }
+}

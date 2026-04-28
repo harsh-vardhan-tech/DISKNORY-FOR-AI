@@ -1,0 +1,88 @@
+{
+  "schema_version": "1.0",
+  "schema_name": "DISKNORY-BRAIN-SCHEMA",
+  "description": "Strict schema for every word entry stored inside DISKNORY brain. Keep this file untouched unless versioning up.",
+  "id_format": "{LANG}_{rank:06d}_{lowercase}",
+  "language_prefix": {
+    "english": "ENG",
+    "hindi": "HIN",
+    "hinglish": "HNG"
+  },
+  "required_fields": [
+    "word_id", "word", "lowercase", "letters", "letter_count", "language",
+    "part_of_speech", "hindi_meaning", "english_meaning",
+    "definition_simple", "example_sentence_en",
+    "confidence_score", "learned_from", "created_timestamp", "version", "is_locked"
+  ],
+  "boolean_flags": [
+    "is_noun", "is_verb", "is_adjective", "is_adverb", "is_pronoun",
+    "is_preposition", "is_conjunction", "is_interjection",
+    "is_common", "is_technical", "is_slang", "is_formal", "is_informal",
+    "is_question_word", "is_emotion", "is_time_related", "is_place_related",
+    "is_person_related", "is_number", "is_color", "is_action", "is_abstract"
+  ],
+  "core_fields": {
+    "word_id": "string (unique id)",
+    "word": "string (raw word as stored)",
+    "lowercase": "string",
+    "letters": "array<string>",
+    "letter_count": "int",
+    "syllables": "int",
+    "phonetic_ipa": "string",
+    "phonetic_simple": "string",
+    "language": "english|hindi|hinglish",
+    "part_of_speech": "noun|verb|adjective|adverb|pronoun|preposition|conjunction|interjection|phrase|other",
+    "grammar_role": "string",
+    "root_word": "string",
+    "word_family": "array<string>",
+    "plural_form": "string|null",
+    "tense_forms": "object|null",
+    "comparative": "string|null",
+    "superlative": "string|null"
+  },
+  "meaning_fields": {
+    "hindi_meaning": "string",
+    "english_meaning": "string",
+    "definition_simple": "string",
+    "definition_detailed": "string",
+    "synonyms": "array<string>",
+    "antonyms": "array<string>",
+    "example_sentence_en": "string",
+    "example_sentence_hi": "string",
+    "usage_context": "array<string>",
+    "common_phrases": "array<string>",
+    "alternative_meanings": "array<string>",
+    "related_concepts": "array<string>"
+  },
+  "ai_fields": {
+    "emotion_weight": "float -1..1",
+    "intent_type": "string",
+    "response_priority": "low|medium|high",
+    "topic_domain": "string",
+    "semantic_tags": "array<string>",
+    "sentence_position_role": "string"
+  },
+  "memory_fields": {
+    "confidence_score": "float 0..1",
+    "learned_from": "dictionary|user|inference|web",
+    "learned_date": "YYYY-MM-DD",
+    "times_used": "int",
+    "last_used": "iso datetime|null",
+    "user_corrections": "array<object>"
+  },
+  "audit_fields": {
+    "created_by": "system|user|ai",
+    "created_timestamp": "iso datetime",
+    "modified_by": "system|user|ai",
+    "modified_timestamp": "iso datetime",
+    "version": "int",
+    "is_locked": "bool"
+  },
+  "future_proof_rules": [
+    "Unknown extra fields MUST be preserved (do not drop).",
+    "Schema version bump only when breaking change happens.",
+    "Every write goes through validator before commit.",
+    "Letters array MUST equal list(word).",
+    "letter_count MUST equal len(letters)."
+  ]
+}
